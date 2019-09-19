@@ -75,52 +75,56 @@ function [ms] = mediastinum4(lungs)
         rlung_slice = double(rlung_slice);
     	rlung_slice(rlung_slice == 1) = 2;
     	lungs2(:,:,z) = double(llung_slice) + rlung_slice;
-	end
+    end
+    % Get XZ slice with greatest volume, assuming fullest view of diaphragm
 	XZ_max = -Inf;
 	XZ_max_val = -Inf;
 	for x = 1:size(lungs2,1)
 		if isequal(unique(lungs2(x,:,:)), [0; 1; 2])
 			lungs2_slice = lungs2(x,:,:);
 			lungs2_slice(lungs2_slice == 2) = 1;
-			if sum(lungs2, 'all') > XZ_max_val
+			if sum(lungs2_slice, 'all') > XZ_max_val
 				XZ_max = x;
+                XZ_max_val = sum(lungs2_slice, 'all');
 			end
 		end
-	end
-    lungs2(lungs2 == 2) = 1;
+    end
+    llung = lungs2;
+    rlung = lungs2;
+    llung(llung == 2) = 0;
+    rlung(rlung == 1) = 0;
+    rlung(rlung == 2) = 1;
+    %rlung = lungs2(lungs2 == 2);
+    %rlung(rlung == 2) = 1;
+    %lungs2(lungs2 == 2) = 1;
     XZ_left = squeeze(llung(XZ_max,:,:));
     XZ_right = squeeze(rlung(XZ_max,:,:));
+    XZ_left = imfill(XZ_left);
+    XZ_right = imfill(XZ_right);
     llung_end_idx = Inf;
     rlung_end_idx = Inf;
+    
+    left_start = false;
+    right_start = false;
+    for z = size(lungs, 3):-1:1
+        left_conn = bwconncomp(XZ_left(:,z));
+        right_conn = bwconncomp(XZ_right(:,z));
+        if left_conn.NumObjects == 2 && left_start == false
+            left_start = true;
+        end
+        if right_conn.NumObjects == 2 && right_start == false
+            right_start = true;
+        end
+        if left_conn.NumObjects == 1 && left_start == true && isinf(llung_end_idx)
+            llung_end_idx = z;
+        end
+        if right_conn.NumObjects == 1 && right_start == true && isinf(rlung_end_idx)
+            rlung_end_idx = z;
+        end
+    end
 
-    left_straight = zeros(size(lungs,2),2);
-    right_straight = zeros(size(lungs,2),2);
-    left_side = zeros(size(lungs,3),2);
-    right_side = zeros(size(lungs,3),2);
-    for y = 1:size(lungs,2)
-    	[ls_idxr, ls_idxc] = find(XZ_left(y,:) == 1, 1, 'last');
-    	if ~isempty(ls_idxr)
-    		left_straight(y,:) = [y, ls_idxc];
-		end
-		[rs_idxr, rs_idxc] = find(XZ_right(y,:) == 1, 1, 'last');
-		if ~isempty(rs_idxr)
-			right_straight(y,:) = [y, rs_idxc];
-		end
-	end
-	for z = 1:size(lungs,3)
-		[ls_idxr, ls_idxc] = find(XZ_left(:,z) == 1, 1, 'last');
-    	if ~isempty(ls_idxr)
-    		left_side(y,:) = [ls_idxr, z];
-		end
-		[rs_idxr, rs_idxc] = find(XZ_right(:,z) == 1, 1);
-    	if ~isempty(rs_idxr)
-    		right_side(z,:) = [rs_idxr, z];
-		end
-	end
-	left_bound = setdiff(left_straight, left_side, 'rows');
-	right_bound = setdiff(right_straight, right_side, 'rows');
-	llung_end_idx = min(left_bound(:,2));
-	rlung_end_idx = min(right_bound(:,2));
+	%llung_end_idx = min(left_bound(:,2));
+	%rlung_end_idx = min(right_bound(:,2));
 
     % Get central portion of mediastinum
     ms = central_body(llung, rlung, [llung_start_idx, llung_end_idx], [rlung_start_idx, rlung_end_idx]);
@@ -241,7 +245,7 @@ function [ms_w_middle] = central_body (llung, rlung, llung_idx, rlung_idx)
     	known = zeros(size(llung,1), size(llung,2));
     	known(unknown_indices) = in;
     	ms_w_middle(:,:,z) = known;
-        figure(1); imagesc(known);
+        % figure(1); imagesc(known);
 	end
 end
 
@@ -694,5 +698,30 @@ function [tmll] = get_llung_border(lungs, l_or_r)
 		tmll(z_slice - min_slice + 1, :) = [y, x, z_slice];
 	end
 end
-
+%     left_straight = zeros(size(lungs,2),2);
+%     right_straight = zeros(size(lungs,2),2);
+%     left_side = zeros(size(lungs,3),2);
+%     right_side = zeros(size(lungs,3),2);
+%     for y = 1:size(lungs,2)
+%     	[ls_idxr, ls_idxc] = find(XZ_left(y,:) == 1, 1, 'last');
+%     	if ~isempty(ls_idxr)
+%     		left_straight(y,:) = [y, ls_idxc];
+% 		end
+% 		[rs_idxr, rs_idxc] = find(XZ_right(y,:) == 1, 1, 'last');
+% 		if ~isempty(rs_idxr)
+% 			right_straight(y,:) = [y, rs_idxc];
+% 		end
+% 	end
+% 	for z = 1:size(lungs,3)
+% 		[ls_idxr, ls_idxc] = find(XZ_left(:,z) == 1, 1, 'last');
+%     	if ~isempty(ls_idxr)
+%     		left_side(y,:) = [ls_idxr, z];
+% 		end
+% 		[rs_idxr, rs_idxc] = find(XZ_right(:,z) == 1, 1);
+%     	if ~isempty(rs_idxr)
+%     		right_side(z,:) = [rs_idxr, z];
+% 		end
+% 	end
+% 	left_bound = setdiff(left_straight, left_side, 'rows');
+% 	right_bound = setdiff(right_straight, right_side, 'rows');
 %}

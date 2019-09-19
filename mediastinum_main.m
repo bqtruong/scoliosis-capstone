@@ -56,6 +56,7 @@ function [ms_volumes, pt_age, pt_gender, pt_height, pt_weight, mss, lungs_vol] =
 	ms_volumes = zeros(length(source_paths),1);
     mss = cell(length(source_paths),1);
     lungs_vol = zeros(length(source_paths),1);
+    voxel_sizes = cell(length(source_paths),1);
 	for idx_dir = 1:length(source_paths)
 		source_path = source_paths{idx_dir};
 		disp(source_path);
@@ -64,6 +65,7 @@ function [ms_volumes, pt_age, pt_gender, pt_height, pt_weight, mss, lungs_vol] =
 		lungs = PTlungs.RawImage;
 		ms = mediastinum4(lungs);
 		VoxelSize = PTlungs.VoxelSize;
+		
 		vol_unit = VoxelSize(1) * VoxelSize(2) * VoxelSize(3);
 		ms_unitless = sum(sum(sum(ms)));
 		volume = ms_unitless * vol_unit;
@@ -75,8 +77,39 @@ function [ms_volumes, pt_age, pt_gender, pt_height, pt_weight, mss, lungs_vol] =
 		pt_weight(idx_dir) = dicom_info.PatientWeight;
 		ms_volumes(idx_dir) = volume;
         mss{idx_dir} = ms;
+        voxel_sizes{idx_dir} = VoxelSize;
 
         lungs_unitless = sum(sum(sum(lungs)));
         lungs_vol(idx_dir)= lungs_unitless * vol_unit;
-	end
+    end
+    
+  %   for idx_dir = 1:length(source_paths)
+		% h = figure(1);
+		% clf(h);
+		% patch(isosurface(mss{idx_dir},.5),...
+		% 'FaceColor',[.5,.5,.5],...
+		% 'EdgeColor','none');
+		% lighting gouraud
+		% camlight
+		% camlight
+		% view(0,0);
+		% pbaspect(VoxelSize)
+
+		% z = input('What level is the diaphragm? ');
+        
+		% mss{idx_dir} = mss{idx_dir}(:,:,z:end);
+  %       ms = mss{idx_dir};
+        
+  %       VoxelSize = voxel_sizes{idx_dir};
+		% vol_unit = VoxelSize(1) * VoxelSize(2) * VoxelSize(3);
+		% ms_unitless = sum(sum(sum(ms)));
+		% volume = ms_unitless * vol_unit;
+		% dicom_dir = dir(source_path);
+		% dicom_info = dicominfo([source_path '\' dicom_dir(3).name]);
+		% pt_age{idx_dir} = dicom_info.PatientAge;
+		% pt_gender{idx_dir} = dicom_info.PatientSex;
+		% pt_height(idx_dir) = dicom_info.PatientSize;
+		% pt_weight(idx_dir) = dicom_info.PatientWeight;
+		% ms_volumes(idx_dir) = volume;
+  %   end
 end
